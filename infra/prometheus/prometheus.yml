@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # Prometheus sẽ scrape endpoint /metrics của container tên model-v1 trên port 8000.
+  # Tất cả metrics thu thập được sẽ tự động có label job="model-v1".
+  - job_name: "model-v1"
+    static_configs:
+      - targets: ["model-v1:8000"]
+
+  - job_name: "model-v2"
+    static_configs:
+      - targets: ["model-v2:8000"]

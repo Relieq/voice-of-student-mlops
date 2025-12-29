@@ -1,0 +1,37 @@
+services:
+  router:
+    image: nginx:1.27
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/router/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - model-v1
+      - model-v2
+
+  model-v1:
+    build:
+      context: ./services/model_service
+    environment:
+      - APP_VERSION=v1
+      - CHAOS_MODE=0
+      - WEB_CONCURRENCY=2
+      - GUNICORN_TIMEOUT=30
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+
+  model-v2:
+    build:
+      context: ./services/model_service
+    environment:
+      - APP_VERSION=v2
+      - CHAOS_MODE=1
+      - WEB_CONCURRENCY=2
+      - GUNICORN_TIMEOUT=30
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro

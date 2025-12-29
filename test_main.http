@@ -9,3 +9,32 @@ GET http://127.0.0.1:8000/hello/User
 Accept: application/json
 
 ###
+
+GET http://localhost:8080/health
+
+###
+
+# curl -X POST http://localhost:8080/predict
+POST http://localhost:8080/predict
+Accept: application/json
+Content-Type: application/json
+
+{
+  "text": "Cơ sở vật chất quá tệ"
+}
+
+###
+$payload = @{
+    text = "Cơ sở vật chất quá tệ"
+}
+
+$json = $payload | ConvertTo-Json -Compress
+$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:8080/predict" `
+    -ContentType "application/json; charset=utf-8" `
+    -Body $bodyBytes
+
+1..200 | % {
+  Invoke-RestMethod -Method Post -Uri "http://localhost:8080/predict" -ContentType "application/json" -Body $bodyBytes
+}
