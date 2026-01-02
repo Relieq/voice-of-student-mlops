@@ -1,10 +1,21 @@
 services:
   router:
     image: nginx:1.27
+    container_name: vos-router
     ports:
       - "8080:8080"
     volumes:
-      - ./infra/router/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/router:/etc/nginx/router:ro
+#      :ro = read-only nghĩa là bên trong container không được sửa trực tiếp file đó.
+#      Nhưng cơ chế rollback chúng ta định làm là:
+#      Copy từ file khác (/etc/nginx/router/nginx_stable.conf) đè lên /etc/nginx/nginx.conf
+#      Nếu /etc/nginx/nginx.conf đang là một mount read-only, thì lệnh cp ... /etc/nginx/nginx.conf sẽ không ghi được.
+    command: >
+      sh -c "
+        cp /etc/nginx/router/nginx_canary.conf /etc/nginx/nginx.conf &&
+        nginx -t &&
+        nginx -g 'daemon off;'
+      "
     depends_on:
       - model-v1
       - model-v2
@@ -35,3 +46,20 @@ services:
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  guard:
+    build:
+      context: ./services/guard
+    environment:
+      - PROM_URL=http://prometheus:9090
+      - CHECK_INTERVAL_SEC=30
+      - ERR_RATE_THRESHOLD=0.01
+      - P95_THRESHOLD_SEC=0.35
+      - FAIL_STREAK_TO_ROLLBACK=2
+      - ROUTER_CONTAINER=vos-router
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # mount Docker socket là “quyền cao”, không nên trong production
+    depends_on:
+      - prometheus
+      - router
+
